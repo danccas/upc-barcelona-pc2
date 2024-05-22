@@ -1,29 +1,71 @@
+---
+title: "Practica2"
+author: "Grupo Lima Perù"
+date: "2024-05-22"
+output: html_document
+---
+
+#### Integrantes:
+
+*Diego Anccas*
+*Cesar Yesquen*
+*Eder Oriondo*
+*Israel Angulo*
+
+## Librerías
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F)
+```
+
+```{r librerias}
 library(rvest)
 library(httr)
 library(xml2)
 library(ggplot2)
 library(dplyr)
 library(gridExtra)
+```
 
-# URL de la página a scrapear
+#### Pregunta 1: Queremos programar un programa de tipo web scrapping con el que podamos obtener una página web, mediante su URL, y poder analizar su contenido HTML con tal de extraerdatos e información específica.
+
+#### 1.1
+
+Descargar la página web de la URL indicada, y almacenarlo en un formato de Rapto para ser tratado.
+
+```{r p1.0}
 url <- "https://www.mediawiki.org/wiki/MediaWiki"
+```
 
-# Descargar la página utilizando httr
+```{r p1.1}
 response <- GET(url)
-
 # Verifica el estado de la respuesta
 if (status_code(response) == 200) {
   # Parsea el contenido HTML
   page <- read_html(content(response, "text"))
   # Parsea el contenido XML
   page_xml <- read_html(content(response, "text"))
+
+} else {
+}
+```
+
+#### 1.2
+
+Analizar el contenido de la web, buscando el título de la página (que en HTML se etiqueta como "title").
+
+```{r p1.2}
   # Extrae el título de la página
   title_node <- xml_find_first(page_xml, "//title")
   title <- xml_text(title_node)
-  
-  # Extrae información utilizando rvest
-  #links <- page %>% html_nodes("a") %>% html_attr("href")
-  links <- page_xml %>%
+```
+
+#### 1.3
+
+Analizar el contenido de la web, buscando todos los enlaces (que en HTML se etiquetan como "a"), buscando el texto del enlace, así como la URL.
+
+```{r p1.3}
+ links <- page_xml %>%
     xml_find_all("//a") %>%
     lapply(function(node) {
       text <- xml_text(node)
@@ -57,62 +99,94 @@ if (status_code(response) == 200) {
   # Eliminar duplicados basados en 'text', 'url', 'status'
   links_df <- links_df %>% distinct(text, url, status, .keep_all = TRUE)
   
+
+```
+
+#### 1.4
+
+Generar una tabla con cada enlace encontrado, indicando el texto que acompaña el enlace, y el número de veces que aparece un enlace con ese mismo objetivo.
+
+```{r p1.4}
   # Agregar la columna 'visto' que cuenta cuántas veces aparece cada enlace
   links_df <- links_df %>%
     group_by(url) %>%
     mutate(visto = n()) %>%
     ungroup()
-  
-  links_df <- links_df %>%
-    mutate(typelink = ifelse(grepl("^https?://", url), "Absoluta", "Relativa"))
-  
-  # Crear el histograma
-  histograma <- ggplot(links_df, aes(x = visto, fill = typelink)) +
-    geom_histogram(binwidth = 1, position = "dodge") +
-    labs(title = "Frecuencia de Aparición de Enlaces",
-         x = "Número de Apariciones",
-         y = "Frecuencia",
-         fill = "Tipo de URL") +
-    theme_minimal()
-  
-  links_df <- links_df %>% mutate(type = ifelse(grepl("^https?://www.mediawiki.org", url) | grepl("^/", url), "Interno", "Externo"))
-  
-  # Contar la cantidad de cada tipo de URL
-  counts <- links_df %>%
-    group_by(type) %>%
-    summarise(count = n(), .groups = 'drop')
-  
-  # Crear el gráfico de barras
-  bar_plot <- ggplot(counts, aes(x = type, y = count, fill = type)) +
-    geom_bar(stat = "identity") +
-    labs(title = "Comparación de Enlaces Internos y Externos",
-         x = "Tipo de Enlace",
-         y = "Cantidad",
-         fill = "Tipo de Enlace") +
-    theme_minimal()
-  
-  status_counts <- links_df %>%
-    group_by(status) %>%
-    summarise(count = n(), .groups = 'drop')
-  
-  # Crear el gráfico de tarta
-  pie_plot <- ggplot(status_counts, aes(x = "", y = count, fill = status, label = paste0(round(count / sum(count) * 100), "%"))) +
-    geom_bar(stat = "identity", width = 1) +
-    geom_text(position = position_stack(vjust = 0.5)) +
-    coord_polar("y") +
-    labs(title = "Porcentajes de Status de Enlaces",
-         fill = "Status") +
-    theme_minimal() +
-    theme(axis.title.x = element_blank(),
-          axis.title.y = element_blank(),
-          axis.text.x = element_blank(),
-          axis.ticks = element_blank(),
-          panel.grid = element_blank())
-  
-  # Unir los gráficos en una sola imagen
-  grid.arrange(bar_plot, pie_plot, histograma, nrow = 3)
-  
-  #print(links_df)
-} else {
-  cat("Error al descargar la página.")
-}
+```
+
+```{r p1.5}
+
+links_df <- links_df %>%
+  mutate(typelink = ifelse(grepl("^https?://", url), "Absoluta", "Relativa"))
+```
+
+#### Pregunta 2: Elaborad, usando las librerías de gráficos base y qplot (ggplot2), una infografía sobre los datos obtenidos. Tal infografía será una reunión de gráficos donde se muestren los siguientes detalles:
+
+#### 2.1
+
+Un histograma con la frecuencia de aparición de los enlaces, pero separado por URLs absolutas (con "http...") y URLs relativas.
+
+```{r p2.1}
+# Crear el histograma
+histograma <- ggplot(links_df, aes(x = visto, fill = typelink)) +
+  geom_histogram(binwidth = 1, position = "dodge") +
+  labs(title = "Frecuencia de Aparición de Enlaces",
+       x = "Número de Apariciones",
+       y = "Frecuencia",
+       fill = "Tipo de URL") +
+  theme_minimal()
+
+links_df <- links_df %>% mutate(type = ifelse(grepl("^https?://www.mediawiki.org", url) | grepl("^/", url), "Interno", "Externo"))
+```
+
+#### 2.2
+
+Un gráfico de barras indicando la suma de enlaces que apuntan a otros dominios o servicios (distinto a <https://www.mediawiki.org> en el caso de ejemplo) vs. la suma de los otros enlaces.
+
+```{r p2.2}
+# Contar la cantidad de cada tipo de URL
+counts <- links_df %>%
+  group_by(type) %>%
+  summarise(count = n(), .groups = 'drop')
+
+
+
+# Crear el gráfico de barras
+bar_plot <- ggplot(counts, aes(x = type, y = count, fill = type)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Comparación de Enlaces Internos y Externos",
+       x = "Tipo de Enlace",
+       y = "Cantidad",
+       fill = "Tipo de Enlace") +
+  theme_minimal()
+
+status_counts <- links_df %>%
+  group_by(status) %>%
+  summarise(count = n(), .groups = 'drop')
+```
+
+#### 2.3
+
+Un gráfico de tarta (pie chart) indicando los porcentajes de Status de nuestro análisis.
+
+```{r p2.3}
+
+# Crear el gráfico de tarta
+pie_plot <- ggplot(status_counts, aes(x = "", y = count, fill = status, label = paste0(round(count / sum(count) * 100), "%"))) +
+  geom_bar(stat = "identity", width = 1) +
+  geom_text(position = position_stack(vjust = 0.5)) +
+  coord_polar("y") +
+  labs(title = "Porcentajes de Status de Enlaces",
+       fill = "Status") +
+  theme_minimal() +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid = element_blank())
+
+# Unir los gráficos en una sola imagen
+grid.arrange(bar_plot, pie_plot, histograma, nrow = 3)
+#print(links_df)
+
+```
